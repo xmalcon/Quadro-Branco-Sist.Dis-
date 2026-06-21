@@ -1,0 +1,48 @@
+services:
+  names:
+    build: .
+    command: ["name", "--port", "5000"]
+    networks:
+      - sdwb
+    ports:
+      - "5000:5000"
+
+  client1:
+    build: .
+    command: ["client", "--name-service", "names:5000", "--advertise-ip", "client1"]
+    depends_on:
+      - names
+    environment:
+      DISPLAY: ${DISPLAY:-host.docker.internal:0.0}
+      SDWB_NAME_SERVICE: names:5000
+      SDWB_ADVERTISE_IP: client1
+    networks:
+      - sdwb
+
+  client2:
+    build: .
+    command: ["client", "--name-service", "names:5000", "--advertise-ip", "client2"]
+    depends_on:
+      - names
+    environment:
+      DISPLAY: ${DISPLAY:-host.docker.internal:0.0}
+      SDWB_NAME_SERVICE: names:5000
+      SDWB_ADVERTISE_IP: client2
+    networks:
+      - sdwb
+
+  client3:
+    build: .
+    command: ["client", "--name-service", "names:5000", "--advertise-ip", "client3"]
+    depends_on:
+      - names
+    environment:
+      DISPLAY: ${DISPLAY:-host.docker.internal:0.0}
+      SDWB_NAME_SERVICE: names:5000
+      SDWB_ADVERTISE_IP: client3
+    networks:
+      - sdwb
+
+networks:
+  sdwb:
+    driver: bridge

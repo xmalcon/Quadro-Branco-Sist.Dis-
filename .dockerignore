@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.vscode/
+vcpkg/
+docs/
+*.zip
+Trabalho_2026_SD_SharedWriteBoard.pdf_output/

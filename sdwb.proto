@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package sdwb;
+
+message Empty {}
+
+message BoardInfo {
+  string nome_servico = 1;
+  string ip = 2;
+  int32 porta = 3;
+}
+
+message RegisterRequest {
+  BoardInfo board = 1;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message BoardListResponse {
+  repeated BoardInfo boards = 1;
+}
+
+service NameDiscoveryService {
+  rpc RegisterCoordinator (RegisterRequest) returns (RegisterResponse);
+  rpc GetBoards (Empty) returns (BoardListResponse);
+}
+
+enum ObjectType {
+  LINE = 0;
+  SQUARE = 1;
+}
+
+enum ActionType {
+  DRAW = 0;
+  CHANGE_COLOR = 1;
+  REMOVE = 2;
+}
+
+message Point {
+  float x = 1;
+  float y = 2;
+}
+
+message BoardObject {
+  string object_id = 1;
+  ObjectType type = 2;
+  repeated Point points = 3;
+  string color = 4;
+}
+
+message Participant {
+  string client_id = 1;
+  string ip = 2;
+  int32 porta = 3;
+  int32 priority = 4;
+}
+
+message JoinRequest {
+  Participant participant = 1;
+}
+
+message SnapshotResponse {
+  repeated BoardObject current_state = 1;
+  repeated Participant participants = 2;
+  string coordinator_id = 3;
+}
+
+message JoinResponse {
+  bool success = 1;
+  SnapshotResponse snapshot = 2;
+  string message = 3;
+}
+
+message ActionRequest {
+  string client_id = 1;
+  ActionType action = 2;
+  BoardObject object = 3;
+  string transaction_id = 4;
+}
+
+message ActionResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message VoteResponse {
+  bool prepared = 1;
+  string message = 2;
+}
+
+message ElectionMessage {
+  string candidate_id = 1;
+  int32 candidate_priority = 2;
+}
+
+message ElectionResponse {
+  bool ack = 1;
+  string coordinator_id = 2;
+}
+
+service BoardCoordinatorService {
+  rpc JoinBoard (JoinRequest) returns (JoinResponse);
+  rpc SendAction (ActionRequest) returns (ActionResponse);
+  rpc GetSnapshot (Empty) returns (SnapshotResponse);
+  rpc Ping (Empty) returns (Empty);
+  rpc StartElection (ElectionMessage) returns (ElectionResponse);
+}
+
+service ClientUpdateService {
+  rpc PrepareAction (ActionRequest) returns (VoteResponse);
+  rpc CommitAction (ActionRequest) returns (Empty);
+  rpc AbortAction (ActionRequest) returns (Empty);
+  rpc GetLocalSnapshot (Empty) returns (SnapshotResponse);
+}
