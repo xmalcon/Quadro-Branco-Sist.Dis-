@@ -100,7 +100,11 @@ class SDWBClientApp:
 
         self.canvas = tk.Canvas(self.root, width=900, height=560, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
-        self.canvas.bind("<Button-1>", self.on_canvas_click)
+        
+        # Associações de eventos corrigidas para clique, arrastar e soltar
+        self.canvas.bind("<Button-1>", self.on_start_draw)
+        self.canvas.bind("<B1-Motion>", self.on_drag_draw)
+        self.canvas.bind("<ButtonRelease-1>", self.on_end_draw)
 
     def set_tool(self, tool):
         self.current_tool = tool
@@ -221,7 +225,7 @@ class SDWBClientApp:
         server.start()
         self.coordinator_handle = CoordinatorHandle(server, servicer, port)
 
-    def on_canvas_click(self, event):
+    def on_start_draw(self, event):
         if not self.board_name:
             messagebox.showinfo("Quadro", "Crie ou ingresse em um quadro primeiro.")
             return
@@ -230,11 +234,46 @@ class SDWBClientApp:
             self.select_nearest(event.x, event.y)
             return
 
-        if self.first_point is None:
-            self.first_point = (event.x, event.y)
+        # Guarda o ponto inicial do desenho
+        self.first_point = (event.x, event.y)
+        self.preview_item = None
+
+    def on_drag_draw(self, event):
+        if not self.board_name or self.current_tool == "select" or not self.first_point:
             return
 
         x0, y0 = self.first_point
+
+        # Apaga o rascunho anterior para não acumular sujeira na tela
+        if hasattr(self, "preview_item") and self.preview_item:
+            self.canvas.delete(self.preview_item)
+
+        # Desenha um rascunho pontilhado (dash) em tempo real
+        if self.current_tool == "line":
+            self.preview_item = self.canvas.create_line(
+                x0, y0, event.x, event.y, fill=self.current_color, width=2, dash=(4, 4)
+            )
+        elif self.current_tool == "square":
+            self.preview_item = self.canvas.create_rectangle(
+                x0, y0, event.x, event.y, outline=self.current_color, width=2, dash=(4, 4)
+            )
+
+    def on_end_draw(self, event):
+        if not self.board_name or self.current_tool == "select" or not self.first_point:
+            return
+
+        # Limpa o último rascunho temporário da tela
+        if hasattr(self, "preview_item") and self.preview_item:
+            self.canvas.delete(self.preview_item)
+            self.preview_item = None
+
+        x0, y0 = self.first_point
+        self.first_point = None  # Reseta o ponto inicial
+
+        # Só envia se o usuário realmente arrastou o mouse
+        if abs(x0 - event.x) < 2 and abs(y0 - event.y) < 2:
+            return
+
         object_type = pb.LINE if self.current_tool == "line" else pb.SQUARE
         obj = pb.BoardObject(
             object_id=uuid.uuid4().hex,
@@ -242,15 +281,13 @@ class SDWBClientApp:
             points=[point(x0, y0), point(event.x, event.y)],
             color=self.current_color,
         )
-        self.first_point = None
-        self.send_action(pb.DRAW, obj)
+        self.send_action(pb.DRAW, [obj])
 
-    def send_action(self, action, obj):
+    def send_action(self, action_type, board_objects_list):
         request = pb.ActionRequest(
-            client_id=self.client_id,
-            action=action,
-            object=clone_object(obj),
             transaction_id=uuid.uuid4().hex,
+            action=action_type,
+            objects=board_objects_list,
         )
         try:
             channel, stub = self.coordinator_stub()
@@ -263,12 +300,14 @@ class SDWBClientApp:
             messagebox.showerror("Transacao recusada", response.error_message)
 
     def apply_remote_action(self, request):
-        if request.action in (pb.DRAW, pb.CHANGE_COLOR):
-            self.objects[request.object.object_id] = clone_object(request.object)
-        elif request.action == pb.REMOVE:
-            self.objects.pop(request.object.object_id, None)
-            if self.selected_object_id == request.object.object_id:
-                self.selected_object_id = None
+        # Como o request agora traz uma lista 'objects', iteramos sobre ela
+        for obj in request.objects:
+            if request.action in (pb.DRAW, pb.CHANGE_COLOR):
+                self.objects[obj.object_id] = clone_object(obj)
+            elif request.action == pb.REMOVE:
+                self.objects.pop(obj.object_id, None)
+                if self.selected_object_id == obj.object_id:
+                    self.selected_object_id = None
         self.redraw()
 
     def change_color(self):
@@ -277,13 +316,13 @@ class SDWBClientApp:
             return
         obj = clone_object(self.objects[self.selected_object_id])
         obj.color = self.current_color
-        self.send_action(pb.CHANGE_COLOR, obj)
+        self.send_action(pb.CHANGE_COLOR, [obj])
 
     def remove_selected(self):
         if not self.selected_object_id:
             messagebox.showinfo("Selecao", "Selecione um objeto primeiro.")
             return
-        self.send_action(pb.REMOVE, self.objects[self.selected_object_id])
+        self.send_action(pb.REMOVE, [self.objects[self.selected_object_id]])
 
     def select_nearest(self, x, y):
         item = self.canvas.find_closest(x, y)

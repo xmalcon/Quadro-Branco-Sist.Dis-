@@ -75,10 +75,9 @@ message JoinResponse {
 }
 
 message ActionRequest {
-  string client_id = 1;
-  ActionType action = 2;
-  BoardObject object = 3;
-  string transaction_id = 4;
+  string transaction_id = 1;
+  int32 action = 2;        // DRAW, REMOVE, CHANGE_COLOR
+  repeated BoardObject objects = 3; // <-- ADICIONE REPEATED E MUDE PARA PLURAL
 }
 
 message ActionResponse {

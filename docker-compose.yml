@@ -1,7 +1,8 @@
 services:
   names:
     build: .
-    command: ["name", "--port", "5000"]
+    # Corrigido: adicionado python e main.py
+    command: ["python", "main.py", "name", "--port", "5000"]
     networks:
       - sdwb
     ports:
@@ -9,7 +10,8 @@ services:
 
   client1:
     build: .
-    command: ["client", "--name-service", "names:5000", "--advertise-ip", "client1"]
+    # Corrigido: adicionado python e main.py
+    command: ["python", "main.py", "client", "--name-service", "names:5000", "--advertise-ip", "client1"]
     depends_on:
       - names
     environment:
@@ -21,7 +23,8 @@ services:
 
   client2:
     build: .
-    command: ["client", "--name-service", "names:5000", "--advertise-ip", "client2"]
+    # Corrigido: adicionado python e main.py
+    command: ["python", "main.py", "client", "--name-service", "names:5000", "--advertise-ip", "client2"]
     depends_on:
       - names
     environment:
@@ -33,7 +36,8 @@ services:
 
   client3:
     build: .
-    command: ["client", "--name-service", "names:5000", "--advertise-ip", "client3"]
+    # Corrigido: adicionado python e main.py
+    command: ["python", "main.py", "client", "--name-service", "names:5000", "--advertise-ip", "client3"]
     depends_on:
       - names
     environment:
