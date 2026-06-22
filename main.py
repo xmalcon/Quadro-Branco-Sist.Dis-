@@ -2,7 +2,7 @@ import argparse
 import os
 
 from sdwb_app.backend.name_service import serve_name_service
-from sdwb_app.common import DEFAULT_ADVERTISE_IP, DEFAULT_NAME_SERVICE
+from sdwb_app.common import DEFAULT_ADVERTISE_IP, DEFAULT_NAME_SERVICE, resolve_advertise_ip
 from sdwb_app.frontend.client_app import SDWBClientApp
 
 
@@ -23,7 +23,7 @@ def parse_args():
         default=os.getenv("SDWB_ADVERTISE_IP", DEFAULT_ADVERTISE_IP),
         help=(
             "IP ou hostname registrado para coordenador/callback. Use 127.0.0.1 "
-            "para varios clientes locais, ou o hostname do container no Docker."
+            "para varios clientes locais, ou auto para Docker."
         ),
     )
     return parser.parse_args()
@@ -34,7 +34,8 @@ def main():
     if args.role == "name":
         serve_name_service(args.port)
     elif args.role == "client":
-        SDWBClientApp(args.name_service, args.advertise_ip).run()
+        advertise_ip = resolve_advertise_ip(args.advertise_ip, args.name_service)
+        SDWBClientApp(args.name_service, advertise_ip).run()
 
 
 if __name__ == "__main__":

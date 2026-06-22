@@ -51,23 +51,33 @@ python main.py client --name-service IP_DO_SERVICO_DE_NOMES:5000 --advertise-ip 
 No Windows, instale e inicie um servidor X11, por exemplo VcXsrv, com acesso TCP
 habilitado. O Compose usa `DISPLAY=host.docker.internal:0.0` por padrao.
 
-Suba o servico de nomes e tres clientes, cada cliente em seu proprio container:
+Suba o servico de nomes e a quantidade desejada de clientes, cada cliente em seu
+proprio container:
 
 ```powershell
-docker-compose up --build names client1 client2 client3
+docker compose up --build --scale client=3 names client
 ```
 
+Para abrir mais clientes depois, aumente o numero da escala:
 
+```powershell
+docker compose up -d --scale client=5 client
 ```
 
-Cada cliente anuncia seu hostname Docker (`client1`, `client2`, `client3`) no servico
-de nomes. Assim, os containers se comunicam pela rede bridge `sdwb`, simulando hosts
-separados.
+Tambem e possivel iniciar um cliente avulso em um novo terminal:
+
+```powershell
+docker compose run --rm client
+```
+
+Cada cliente anuncia automaticamente seu IP interno na rede Docker. Assim, os
+containers se comunicam pela rede bridge `sdwb`, simulando hosts separados, sem
+precisar declarar `client1`, `client2`, `client3` etc. no Compose.
 
 Para testar morte do coordenador, crie o quadro no `client1` e derrube o container:
 
 ```powershell
-docker-compose stop client1
+docker stop quadrobranco-client-1
 ```
 
 Os demais clientes detectam a falha e elegem o participante com maior prioridade local.

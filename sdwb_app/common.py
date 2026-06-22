@@ -19,6 +19,22 @@ def local_ip():
         return "127.0.0.1"
 
 
+def resolve_advertise_ip(advertise_ip, name_service_address=None):
+    if advertise_ip and advertise_ip.lower() != "auto":
+        return advertise_ip
+
+    if name_service_address and ":" in name_service_address:
+        host, _, port = name_service_address.rpartition(":")
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.connect((host, int(port)))
+                return sock.getsockname()[0]
+        except OSError:
+            pass
+
+    return local_ip()
+
+
 def free_port():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("", 0))

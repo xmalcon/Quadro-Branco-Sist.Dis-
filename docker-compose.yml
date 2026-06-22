@@ -1,49 +1,21 @@
 services:
   names:
     build: .
-    # Corrigido: adicionado python e main.py
     command: ["python", "main.py", "name", "--port", "5000"]
     networks:
       - sdwb
     ports:
       - "5000:5000"
 
-  client1:
+  client:
     build: .
-    # Corrigido: adicionado python e main.py
-    command: ["python", "main.py", "client", "--name-service", "names:5000", "--advertise-ip", "client1"]
+    command: ["python", "main.py", "client", "--name-service", "names:5000", "--advertise-ip", "auto"]
     depends_on:
       - names
     environment:
       DISPLAY: ${DISPLAY:-host.docker.internal:0.0}
       SDWB_NAME_SERVICE: names:5000
-      SDWB_ADVERTISE_IP: client1
-    networks:
-      - sdwb
-
-  client2:
-    build: .
-    # Corrigido: adicionado python e main.py
-    command: ["python", "main.py", "client", "--name-service", "names:5000", "--advertise-ip", "client2"]
-    depends_on:
-      - names
-    environment:
-      DISPLAY: ${DISPLAY:-host.docker.internal:0.0}
-      SDWB_NAME_SERVICE: names:5000
-      SDWB_ADVERTISE_IP: client2
-    networks:
-      - sdwb
-
-  client3:
-    build: .
-    # Corrigido: adicionado python e main.py
-    command: ["python", "main.py", "client", "--name-service", "names:5000", "--advertise-ip", "client3"]
-    depends_on:
-      - names
-    environment:
-      DISPLAY: ${DISPLAY:-host.docker.internal:0.0}
-      SDWB_NAME_SERVICE: names:5000
-      SDWB_ADVERTISE_IP: client3
+      SDWB_ADVERTISE_IP: auto
     networks:
       - sdwb
 
