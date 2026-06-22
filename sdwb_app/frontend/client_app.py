@@ -379,10 +379,37 @@ class SDWBClientApp:
 
     def _elect_new_coordinator(self):
         candidates = list(self.participants.values()) or [self.participant()]
-        winner = max(candidates, key=participant_key)
+    
+    # --- NOVO: Filtragem de Candidatos Vivos ---
+        alive_candidates = []
+        for p in candidates:
+            # Se for você mesmo, obviamente você está vivo
+            if p.client_id == self.client_id:
+                alive_candidates.append(p)
+                continue
+        
+        # Tenta dar um "ping" no participante para ver se ele responde
+            try:
+                with grpc.insecure_channel(target(p.ip, p.porta)) as channel:
+                    stub = rpc.ClientUpdateServiceStub(channel)
+                    # Usamos o GetLocalSnapshot com um timeout curto apenas como Ping
+                    stub.GetLocalSnapshot(pb.Empty(), timeout=0.4)
+                    alive_candidates.append(p)
+            except grpc.RpcError:
+                # Se deu erro, o candidato está morto. Ignoramos ele.
+                pass
+
+        # Caso todos os outros tenham morrido e a lista esvazie por garantia
+        if not alive_candidates:
+            alive_candidates = [self.participant()]
+    
+        # Agora calculamos o vencedor APENAS entre quem respondeu na rede
+        winner = max(alive_candidates, key=participant_key)
+        # --- FIM DA ALTERAÇÃO ---
+
         if winner.client_id == self.client_id:
             port = free_port()
-            self._start_local_coordinator(port, list(self.objects.values()), candidates)
+            self._start_local_coordinator(port, list(self.objects.values()), alive_candidates)
             self.coordinator = pb.BoardInfo(
                 nome_servico=self.board_name,
                 ip=self.ip,
@@ -408,7 +435,7 @@ class SDWBClientApp:
                         return
             except grpc.RpcError:
                 pass
-
+            
     def close(self):
         self.running = False
         self.callback_server.stop(0)

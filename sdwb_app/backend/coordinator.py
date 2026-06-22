@@ -77,19 +77,6 @@ class BoardCoordinatorServicer(rpc.BoardCoordinatorServiceServicer):
                     self.locked_objects.discard(obj.object_id)
 
             return pb.ActionResponse(success=success, error_message=msg)
-        try:
-            prepared, error = self._prepare_all(request)
-            if not prepared:
-                self._abort_all(request)
-                return pb.ActionResponse(success=False, error_message=error)
-            with self.lock:
-                self._apply_action(request)
-            self._commit_all(request)
-            return pb.ActionResponse(success=True)
-        finally:
-            if request.action in (pb.CHANGE_COLOR, pb.REMOVE):
-                with self.lock:
-                    self.locked_objects.discard(request.object.object_id)
                                 
 
     def GetSnapshot(self, request, context):
@@ -161,7 +148,9 @@ class BoardCoordinatorServicer(rpc.BoardCoordinatorServiceServicer):
         if failed_participants:
             with self.lock:
                 for p in failed_participants:
-                    self.participants.pop(p.client_id, None)
+                    # SÓ REMOVE SE NÃO FOR O PRÓPRIO COORDENADOR
+                    if p.client_id != self.coordinator_id:
+                        self.participants.pop(p.client_id, None)
 
         return success, error_msg
 
@@ -191,7 +180,9 @@ class BoardCoordinatorServicer(rpc.BoardCoordinatorServiceServicer):
         if failed_participants:
             with self.lock:
                 for p in failed_participants:
-                    self.participants.pop(p.client_id, None)
+                    # SÓ REMOVE SE NÃO FOR O PRÓPRIO COORDENADOR
+                    if p.client_id != self.coordinator_id:
+                        self.participants.pop(p.client_id, None)
 
     def _abort_all(self, request):
         for participant in self._live_participants():
